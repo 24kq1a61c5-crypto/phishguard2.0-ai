@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PhishGuard AI — Real-time Phishing & Scam Detector</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 20% 0%, #0f1729 0%, #0a0e1a 45%);
+    color: #e6edf3;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .container { width: 100%; max-width: 780px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 2rem; margin-bottom: 6px; letter-spacing: -0.5px; }
+  h1 span { color: #00d4ff; }
+  .sub { color: #8b949e; font-size: 0.95rem; margin-bottom: 12px; }
+  .stat-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    margin-bottom: 24px;
+  }
+  .stat-bar b { color: #00d4ff; }
+  .stat-bar .warn b { color: #ff3c3c; }
+  .card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 18px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #30363d; }
+  label {
+    font-size: 0.82rem; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    font-weight: 600;
+  }
+  textarea, input[type=text] {
+    width: 100%; margin-top: 10px;
+    padding: 12px 14px;
+    background: #0a0e1a;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 0.95rem;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  textarea:focus, input[type=text]:focus {
+    outline: none; border-color: #00d4ff;
+  }
+  button {
+    margin-top: 12px;
+    padding: 11px 20px;
+    background: linear-gradient(135deg, #00d4ff, #0070f3);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  button:hover { opacity: 0.92; transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  .preset-btn {
+    font-size: 0.78rem !important;
+    padding: 6px 12px !important;
+    margin-right: 6px !important;
+    margin-top: 10px !important;
+    background: #1f2937 !important;
+    color: #8b949e !important;
+    font-weight: 500 !important;
+  }
+  .preset-btn:hover { color: #00d4ff !important; }
+  .result {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to {opacity:1;transform:translateY(0);} }
+  .result.show { display: block; }
+  .risk-low  { background: rgba(0,200,100,0.10); border-left: 4px solid #00c864; }
+  .risk-med  { background: rgba(255,180,0,0.10); border-left: 4px solid #ffb400; }
+  .risk-high { background: rgba(255,60,60,0.10); border-left: 4px solid #ff3c3c; }
+  .score { font-size: 2.2rem; font-weight: 700; line-height: 1; }
+  .verdict { font-weight: 600; margin: 6px 0 14px; font-size: 1rem; }
+  ul { margin-left: 20px; margin-top: 8px; }
+  li { margin-bottom: 7px; font-size: 0.9rem; color: #c9d1d9; line-height: 1.5; }
+  .tag {
+    display: inline-block;
+    background: #1f2937;
+    color: #8b949e;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin: 4px 4px 0 0;
+    border: 1px solid #30363d;
+  }
+  .url-breakdown {
+    font-family: 'Consolas', monospace;
+    font-size: 0.95rem;
+    padding: 12px 14px;
+    background: #0a0e1a;
+    border-radius: 8px;
+    word-break: break-all;
+    margin: 8px 0 12px;
+    line-height: 1.6;
+    border: 1px solid #1f2937;
+  }
+  footer {
+    text-align: center;
+    color: #4b5563;
+    font-size: 0.78rem;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #1f2937;
+  }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+  .b-low { background: rgba(0,200,100,0.2); color: #00ff88; }
+  .b-med { background: rgba(255,180,0,0.2); color: #ffb400; }
+  .b-high { background: rgba(255,60,60,0.2); color: #ff5555; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>🛡️ Phish<span>Guard</span> AI</h1>
+    <p class="sub">Real-time phishing & scam detection · Runs 100% in your browser · Zero data leaves your device</p>
+    <div class="stat-bar">
+      <div>Scans run: <b id="scanCount">0</b></div>
+      <div class="warn">Threats flagged: <b id="threatCount">0</b></div>
+      <div>Status: <span class="badge b-low">Engine Active</span></div>
+    </div>
+  </header>
+
+  <!-- URL SCANNER -->
+  <div class="card">
+    <label>🔗 URL Threat Scanner</label>
+    <input type="text" id="urlInput" placeholder="https://example.com/login" />
+    <button onclick="scanURL()">Scan URL</button>
+    <button class="preset-btn" onclick="document.getElementById('urlInput').value='http://paypa1-secure.xyz/login';scanURL()">Try Phishing</button>
+    <button class="preset-btn" onclick="document.getElementById('urlInput').value='https://github.com';scanURL()">Try Safe</button>
+    <div id="urlResult" class="result"></div>
+  </div>
+
+  <!-- MESSAGE SCANNER -->
+  <div class="card">
+    <label>💬 Scam Message Detector</label>
+    <textarea id="msgInput" rows="3" placeholder="Paste SMS, email, or WhatsApp message here..."></textarea>
+    <button onclick="scanMsg()">Scan Message</button>
+    <button class="preset-btn" onclick="document.getElementById('msgInput').value='URGENT: Your KYC is expiring. Click here to verify OTP immediately: http://bit.ly/xyz';scanMsg()">Try Scam SMS</button>
+    <div id="msgResult" class="result"></div>
+  </div>
+
+  <!-- URL ANATOMY -->
+  <div class="card">
+    <label>🔬 URL Anatomy — See What's Really Behind the Link</label>
+    <input type="text" id="anatomyInput" placeholder="Paste any URL to dissect..." />
+    <button onclick="showAnatomy()">Break It Down</button>
+    <button class="preset-btn" onclick="document.getElementById('anatomyInput').value='http://paypal.com.secure-login.xyz/verify';showAnatomy()">Try Phishing Example</button>
+    <button class="preset-btn" onclick="document.getElementById('anatomyInput').value='https://www.google.com/search?q=test';showAnatomy()">Try Safe URL</button>
+    <div id="anatomyResult" class="result"></div>
+  </div>
+
+  <!-- FEATURE TAGS -->
+  <div style="text-align:center;margin-top:24px;">
+    <span class="tag">HTTPS Check</span>
+    <span class="tag">Typosquatting</span>
+    <span class="tag">Suspicious TLDs</span>
+    <span class="tag">URL Shorteners</span>
+    <span class="tag">IP-based URLs</span>
+    <span class="tag">Urgency Detection</span>
+    <span class="tag">OTP / KYC Bait</span>
+    <span class="tag">URL Anatomy</span>
+    <span class="tag">Zero-Trust Engine</span>
+  </div>
+
+  <footer>
+    Built for HackNow Global Hackathon 2026 · 100% client-side · MIT License
+  </footer>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   GLOBAL STATE
+   ═══════════════════════════════════════════════════ */
+let scanCount = 0;
+let threatCount = 0;
+
+function bumpScan(score) {
+  scanCount++;
+  document.getElementById('scanCount').textContent = scanCount;
+  if (score >= 60) {
+    threatCount++;
+    document.getElementById('threatCount').textContent = threatCount;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SHARED CONSTANTS
+   ═══════════════════════════════════════════════════ */
+const BAD_TLDS = ['.xyz','.tk','.ml','.ga','.cf','.gq','.top','.work','.click','.link','.zip','.country','.stream'];
+const SHORTENERS = ['bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','is.gd','buff.ly','rebrand.ly','cutt.ly'];
+const BRANDS = ['paypal','google','amazon','apple','microsoft','facebook','instagram','netflix','bank','whatsapp','flipkart','sbi','hdfc','icici','axis','phonepe','paytm'];
+const URGENCY = ['urgent','immediately','verify now','account suspended','act now','limited time','final warning','click here','expires today','last chance','within 24 hours'];
+const BAIT = ['otp','kyc','lottery','winner','prize','refund','gift card','crypto','bitcoin','password','login','update your','confirm your','ssn','aadhaar','pan card','cvv','upi pin'];
+
+function riskClass(score) {
+  if (score >= 60) return 'risk-high';
+  if (score >= 30) return 'risk-med';
+  return 'risk-low';
+}
+
+/* ═══════════════════════════════════════════════════
+   URL THREAT SCANNER
+   ═══════════════════════════════════════════════════ */
+function scanURL() {
+  const raw = document.getElementById('urlInput').value.trim();
+  const box = document.getElementById('urlResult');
+  if (!raw) { box.className='result show risk-med'; box.innerHTML='⚠️ Please enter a URL.'; return; }
+
+  let score = 0;
+  const reasons = [];
+  const url = raw.toLowerCase();
+
+  if (url.startsWith('http://')) { score += 25; reasons.push('Uses HTTP (not HTTPS) — traffic is unencrypted.'); }
+  if (!url.includes('https://') && !url.includes('http://')) { score += 10; reasons.push('Missing protocol — likely malformed or masked link.'); }
+
+  BAD_TLDS.forEach(t => { if (url.includes(t)) { score += 25; reasons.push(`Suspicious TLD detected: ${t}`); }});
+  SHORTENERS.forEach(s => { if (url.includes(s)) { score += 20; reasons.push(`URL shortener detected (${s}) — hides real destination.`); }});
+
+  if (url.match(/https?:\/\/(\d{1,3}\.){3}\d{1,3}/)) { score += 30; reasons.push('Raw IP address in URL — common in phishing.'); }
+
+  BRANDS.forEach(b => {
+    if (url.includes(b)) {
+      const legit = ['.'+b+'.com', b+'.com', b+'.in', b+'.org'];
+      const isLegit = legit.some(l => url.includes(l));
+      if (!isLegit) { score += 30; reasons.push(`Brand name "${b}" used on a non-official domain — possible typosquatting.`); }
+    }
+  });
+
+  const dots = (url.match(/\./g) || []).length;
+  if (dots > 3) { score += 15; reasons.push(`Excessive subdomains (${dots} dots) — often used to fake legitimacy.`); }
+
+  if (url.includes('@')) { score += 20; reasons.push('"@" symbol in URL — can hide the real domain.'); }
+  if (url.length > 90) { score += 10; reasons.push('Unusually long URL — common obfuscation trick.'); }
+  if (url.match(/-/g) && url.split('//')[1] && url.split('//')[1].includes('-')) { score += 5; reasons.push('Hyphenated domain — common in lookalike phishing domains.'); }
+
+  score = Math.min(score, 100);
+  if (reasons.length === 0) reasons.push('✅ No common phishing indicators found.');
+
+  const verdict = score >= 60 ? '🚨 High Risk — Do NOT click' : score >= 30 ? '⚠️ Suspicious — Proceed with caution' : '✅ Looks Safe';
+
+  box.className = 'result show ' + riskClass(score);
+  box.innerHTML = `<div class="score">${score}/100</div><div class="verdict">${verdict}</div><strong>Why:</strong><ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
+
+  bumpScan(score);
+}
+
+/* ═══════════════════════════════════════════════════
+   SCAM MESSAGE DETECTOR
+   ═══════════════════════════════════════════════════ */
+function scanMsg() {
+  const raw = document.getElementById('msgInput').value.trim();
+  const box = document.getElementById('msgResult');
+  if (!raw) { box.className='result show risk-med'; box.innerHTML='⚠️ Please enter a message.'; return; }
+
+  let score = 0;
+  const reasons = [];
+  const msg = raw.toLowerCase();
+
+  URGENCY.forEach(k => { if (msg.includes(k)) { score += 12; reasons.push(`Urgency trigger: "${k}"`); }});
+  BAIT.forEach(k => { if (msg.includes(k)) { score += 10; reasons.push(`Sensitive bait keyword: "${k}"`); }});
+
+  if (/https?:\/\/|www\./.test(msg)) { score += 15; reasons.push('Contains an embedded link.'); }
+  if (/\b\d{4,8}\b/.test(msg) && msg.includes('otp')) { score += 15; reasons.push('Possible OTP harvesting attempt.'); }
+  if (msg.includes('dear customer') || msg.includes('dear user')) { score += 10; reasons.push('Generic greeting — mass phishing indicator.'); }
+  if (msg.includes('won') || msg.includes('winner') || msg.includes('prize')) { score += 15; reasons.push('Lottery/prize scam pattern.'); }
+  if (msg.includes('bank') && (msg.includes('verify') || msg.includes('update'))) { score += 15; reasons.push('Bank verification scam pattern.'); }
+
+  score = Math.min(score, 100);
+  if (reasons.length === 0) reasons.push('✅ No common scam indicators found.');
+
+  const verdict = score >= 60 ? '🚨 High Risk — Likely a scam' : score >= 30 ? '⚠️ Suspicious — Verify before acting' : '✅ Looks Safe';
+
+  box.className = 'result show ' + riskClass(score);
+  box.innerHTML = `<div class="score">${score}/100</div><div class="verdict">${verdict}</div><strong>Why:</strong><ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
+
+  bumpScan(score);
+}
+
+/* ═══════════════════════════════════════════════════
+   URL ANATOMY VISUALIZER
+   ═══════════════════════════════════════════════════ */
+function showAnatomy() {
+  const box = document.getElementById('anatomyResult');
+  const raw = document.getElementById('anatomyInput').value.trim();
+  if (!raw) { box.className='result show risk-med'; box.innerHTML='⚠️ Enter a URL.'; return; }
+
+  let url = raw;
+  if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+
+  let parsed;
+  try { parsed = new URL(url); }
+  catch(e) { box.className='result show risk-high'; box.innerHTML='<div class="verdict">🚨 Malformed URL — likely fake.</div>'; return; }
+
+  const proto = parsed.protocol.replace(':','');
+  const hostParts = parsed.hostname.split('.');
+  const tld = hostParts.slice(-1)[0];
+  const domain = hostParts.slice(-2).join('.');
+  const subdomains = hostParts.slice(0, -2);
+
+  let score = 0;
+  const flags = [];
+
+  if (subdomains.length > 0) {
+    score += 20;
+    flags.push(`🎭 Fake subdomain present: "${subdomains.join('.')}" — attackers use this to fake brands.`);
+  }
+
+  BRANDS.forEach(b => {
+    if (subdomains.join('.').includes(b) && !domain.includes(b)) {
+      score += 40;
+      flags.push(`🚨 "${b}" appears in the subdomain but the REAL site is "${domain}" — classic phishing!`);
+    }
+  });
+
+  if (proto === 'http') { score += 20; flags.push('🔓 Not HTTPS — data is unencrypted.'); }
+  if (BAD_TLDS.some(t => t === '.' + tld)) { score += 20; flags.push(`⚠️ Suspicious TLD: .${tld}`); }
+  if (parsed.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/)) { score += 40; flags.push('🎯 Raw IP address used instead of a domain.'); }
+  if (raw.includes('@')) { score += 30; flags.push('🕵️ "@" in URL — everything before it is ignored by browsers.'); }
+
+  if (flags.length === 0) flags.push('✅ No structural red flags detected.');
+
+  score = Math.min(score, 100);
+  const verdict = score >= 60 ? '🚨 High Risk' : score >= 30 ? '⚠️ Suspicious' : '✅ Looks Safe';
+  const cls = score >= 60 ? 'risk-high' : score >= 30 ? 'risk-med' : 'risk-low';
+
+  const highlighted =
+    `<span style="color:#ff6b6b;text-decoration:line-through;">${proto}://</span>` +
+    (subdomains.length ? `<span style="color:#ff3c3c;background:rgba(255,60,60,0.15);padding:2px 4px;border-radius:4px;">${subdomains.join('.')}.</span>` : '') +
+    `<span style="color:#00ff88;background:rgba(0,255,136,0.15);padding:2px 6px;border-radius:4px;font-weight:700;">${domain}</span>` +
+    `<span style="color:#ffb400;">${parsed.pathname}${parsed.search}</span>`;
+
+  box.className = 'result show ' + cls;
+  box.innerHTML = `
+    <div class="score">${score}/100</div>
+    <div class="verdict">${verdict}</div>
+    <p style="font-size:0.85rem;color:#8b949e;margin-bottom:4px;">URL Breakdown:</p>
+    <div class="url-breakdown">${highlighted}</div>
+    <p style="font-size:0.85rem;color:#8b949e;">🟢 Real domain = <b style="color:#00ff88;">${domain}</b> · This is the ONLY part that decides where you actually go.</p>
+    <strong style="display:block;margin-top:12px;">Findings:</strong>
+    <ul>${flags.map(f=>`<li>${f}</li>`).join('')}</ul>
+  `;
+
+  bumpScan(score);
+}
+</script>
+</body>
+</html>
